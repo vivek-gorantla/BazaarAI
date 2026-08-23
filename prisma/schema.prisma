@@ -1,8 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -10,4 +5,231 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+
+enum UserRole {
+  buyer
+  merchant
+  admin
+}
+
+enum ProductSource {
+  voice
+  image
+  excel
+  manual
+}
+
+enum ProductUnit {
+  kg
+  gram
+  tonne
+  litre
+  ml
+  meter
+  cm
+  pack
+  box
+  pair
+  piece
+  set
+  dozen
+  bottle
+  other
+}
+
+enum OrderStatus {
+  draft
+  confirmed
+  paid
+  failed
+  fulfilled
+  cancelled
+}
+
+enum PaymentStatus {
+  created
+  captured
+  failed
+  refunded
+}
+
+enum PaymentMethod {
+  razorpay
+}
+
+enum StoreStatus {
+  active
+  inactive
+  suspended
+}
+
+
+model User {
+  id                String   @id @default(uuid())
+  role              UserRole
+  name              String
+  phone             String   @unique
+  preferredLanguage String   @default("en") @map("preferred_language")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  stores Store[] @relation("MerchantStores")
+
+  orders Order[] @relation("BuyerOrders")
+
+  @@map("users")
+}
+
+
+model Store {
+  id           String      @id @default(uuid())
+  ownerId      String      @map("owner_id")
+
+
+  name         String
+  description  String?
+
+
+  businessType String      @map("business_type")
+
+  // Location
+  address      String
+  city         String?
+  state        String?
+  pincode      String?
+  lat          Float
+  lng          Float
+
+  status       StoreStatus @default(active)
+
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+
+  owner    User      @relation("MerchantStores", fields: [ownerId], references: [id])
+  products Product[]
+  orders   Order[]
+
+  @@index([ownerId])
+  @@index([businessType])
+  @@index([city])
+  @@index([lat, lng])
+  @@map("stores")
+}
+
+
+
+model Product {
+  id          String        @id @default(uuid())
+  storeId     String        @map("store_id")
+
+  name        String
+  description String?
+
+  category    String
+  subcategory String?
+
+  unit        ProductUnit
+  price       Decimal       @db.Decimal(10, 2)
+  stockQty    Decimal       @default(0) @map("stock_qty") @db.Decimal(10, 2)
+
+  sku         String?
+
+  imageUrl    String?       @map("image_url")
+
+  attributes  Json?
+
+  source      ProductSource @default(manual)
+
+  isActive    Boolean       @default(true) @map("is_active")
+
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  store       Store         @relation(fields: [storeId], references: [id])
+  orderItems  OrderItem[]
+
+  @@index([storeId])
+  @@index([storeId, name])
+  @@index([category])
+  @@index([subcategory])
+  @@index([name])
+  @@map("products")
+}
+
+
+model Order {
+  id          String      @id @default(uuid())
+
+  buyerId     String      @map("buyer_id")
+  storeId     String      @map("store_id")
+
+  status      OrderStatus @default(draft)
+
+
+  totalAmount Decimal     @default(0) @map("total_amount") @db.Decimal(10, 2)
+
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  buyer       User        @relation("BuyerOrders", fields: [buyerId], references: [id])
+  store       Store       @relation(fields: [storeId], references: [id])
+
+  orderItems  OrderItem[]
+  payment     Payment?
+
+  @@index([buyerId])
+  @@index([storeId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("orders")
+}
+
+
+model OrderItem {
+  id              String   @id @default(uuid())
+
+  orderId         String   @map("order_id")
+  productId       String   @map("product_id")
+
+  qty             Decimal  @db.Decimal(10, 2)
+
+  priceAtPurchase Decimal  @map("price_at_purchase") @db.Decimal(10, 2)
+
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  order           Order    @relation(fields: [orderId], references: [id])
+  product         Product  @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
+  @@map("order_items")
+}
+
+
+
+model Payment {
+  id                 String        @id @default(uuid())
+
+  orderId            String        @unique @map("order_id")
+
+  razorpayOrderId    String?       @map("razorpay_order_id")
+  razorpayPaymentId  String?       @map("razorpay_payment_id")
+
+  status             PaymentStatus @default(created)
+  method             PaymentMethod @default(razorpay)
+
+  amount             Decimal       @db.Decimal(10, 2)
+
+  capturedAt         DateTime?     @map("captured_at")
+  createdAt          DateTime      @default(now()) @map("created_at")
+  updatedAt          DateTime      @updatedAt @map("updated_at")
+
+  order              Order         @relation(fields: [orderId], references: [id])
+
+  @@index([status])
+  @@index([razorpayOrderId])
+  @@index([razorpayPaymentId])
+  @@map("payments")
 }
