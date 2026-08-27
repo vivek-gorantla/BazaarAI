@@ -1,4 +1,7 @@
-import { Schema, model, models } from "mongoose";
+import mongoose, { Schema } from "mongoose";
+
+const { models } = mongoose;
+const model = mongoose.model.bind(mongoose);
 
 const RawImageCaptureSchema = new Schema(
   {

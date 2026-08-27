@@ -65,6 +65,19 @@ enum StoreStatus {
   suspended
 }
 
+enum StaffRole {
+  manager
+  cashier
+  delivery
+  inventory
+}
+
+enum StaffStatus {
+  pending
+  active
+  inactive
+}
+
 
 model User {
   id                String   @id @default(uuid())
@@ -90,7 +103,15 @@ model Store {
 
   name         String
   description  String?
-
+  legalName    String?     @map("legal_name")
+  tradingName  String?     @map("trading_name")
+  taxId        String?     @map("tax_id")
+  vatNumber    String?     @map("vat_number")
+  businessEmail String?    @map("business_email")
+  supportPhone String?     @map("support_phone")
+  bannerUrl    String?     @map("banner_url")
+  logoUrl      String?     @map("logo_url")
+  themeColor   String?     @map("theme_color")
 
   businessType String      @map("business_type")
 
@@ -99,10 +120,18 @@ model Store {
   city         String?
   state        String?
   pincode      String?
+  unit         String?
+  deliveryEnabled Boolean @default(true) @map("delivery_enabled")
+  deliveryRadius Float?   @map("delivery_radius")
   lat          Float
   lng          Float
 
   status       StoreStatus @default(active)
+
+  // Payments & Bank
+  bankAccountNumber String?  @map("bank_account_number")
+  bankIfsc          String?  @map("bank_ifsc")
+  upiId             String?  @map("upi_id")
 
   createdAt    DateTime    @default(now()) @map("created_at")
   updatedAt    DateTime    @updatedAt @map("updated_at")
@@ -110,12 +139,33 @@ model Store {
   owner    User      @relation("MerchantStores", fields: [ownerId], references: [id])
   products Product[]
   orders   Order[]
+  staff    StoreStaff[]
 
   @@index([ownerId])
   @@index([businessType])
   @@index([city])
   @@index([lat, lng])
   @@map("stores")
+}
+
+model StoreStaff {
+  id        String      @id @default(uuid())
+  storeId   String      @map("store_id")
+  
+  name      String
+  phone     String
+  role      StaffRole   @default(cashier)
+  status    StaffStatus @default(pending)
+  
+  createdAt DateTime    @default(now()) @map("created_at")
+  updatedAt DateTime    @updatedAt @map("updated_at")
+
+  store     Store       @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, phone])
+  @@index([storeId])
+  @@index([phone])
+  @@map("store_staff")
 }
 
 
