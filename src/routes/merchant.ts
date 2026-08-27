@@ -15,12 +15,16 @@ import {
   deleteStaff,
   getStoreDashboard
 } from "../controllers/merchant.js";
+import { uploadAudio } from "../controllers/onBoardingAgent.js";
+import multer from "multer";
 
 const merchantRouter = Router();
+const upload = multer({ storage: multer.memoryStorage() });
 
 merchantRouter.use(requireMerchant);
 merchantRouter.get("/profile", asyncHandler(getProfile));
 merchantRouter.patch("/profile", asyncHandler(patchProfile));
+merchantRouter.post("/upload-audio", upload.single("audio"), asyncHandler(uploadAudio));
 merchantRouter.post("/stores", asyncHandler(postStore));
 merchantRouter.get("/stores", asyncHandler(getStores));
 merchantRouter.get("/stores/:storeId", asyncHandler(getStoreById));
