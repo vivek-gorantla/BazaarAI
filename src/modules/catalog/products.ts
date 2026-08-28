@@ -23,6 +23,33 @@ export async function createProduct(storeId: string, ownerId: string, body: unkn
   return prisma.product.create({ data: { storeId, name: input.name as string, category: input.category as string, unit: input.unit as never, price: new Prisma.Decimal(input.price as number), stockQty: new Prisma.Decimal((input.stockQty as number | undefined) ?? 0), description: input.description as string | undefined, subcategory: input.subcategory as string | undefined, sku: input.sku as string | undefined, imageUrl: input.imageUrl as string | undefined, attributes: input.attributes as Prisma.InputJsonValue | undefined, source: (input.source as never) ?? "manual" } });
 }
 
+export async function bulkCreateProducts(storeId: string, ownerId: string, body: unknown) {
+  await ownedStore(storeId, ownerId);
+  if (!Array.isArray(body) || body.length === 0) {
+    throw new ApiError(400, "INVALID_REQUEST", "Body must be a non-empty array of products");
+  }
+  const products = body.map((item) => {
+    const input = validateProduct(item, false);
+    return {
+      storeId,
+      name: input.name as string,
+      category: input.category as string,
+      unit: (input.unit as never) || "piece",
+      price: new Prisma.Decimal(input.price as number),
+      stockQty: new Prisma.Decimal((input.stockQty as number | undefined) ?? 0),
+      description: input.description as string | undefined,
+      subcategory: input.subcategory as string | undefined,
+      sku: input.sku as string | undefined,
+      imageUrl: input.imageUrl as string | undefined,
+      attributes: input.attributes as Prisma.InputJsonValue | undefined,
+      source: (input.source as never) ?? "excel",
+    };
+  });
+  return prisma.$transaction(async (tx) => {
+    return Promise.all(products.map((p) => tx.product.create({ data: p })));
+  });
+}
+
 export async function listProducts(storeId: string, ownerId: string, query: Record<string, unknown>) {
   await ownedStore(storeId, ownerId);
   const page = Math.max(1, Number(query.page) || 1);

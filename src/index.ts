@@ -7,6 +7,8 @@ import catalogRouter from "./routes/catalog.js";
 import inventoryRouter from "./routes/inventory.js";
 import onboardingRouter from "./routes/onboarding.js";
 import ordersRouter from "./routes/orders.js";
+import suppliersRouter from "./routes/suppliers.js";
+import purchaseOrdersRouter from "./routes/purchaseOrders.js";
 import { errorHandler } from "./middleware/errors.js";
 import { attachWebSocketServer } from "./websocket/agentSocket.js";
 
@@ -20,6 +22,8 @@ app.use("/api/catalog", catalogRouter);
 app.use("/api/inventory", inventoryRouter);
 app.use("/api/onboarding", onboardingRouter);
 app.use("/api/merchant", ordersRouter);
+app.use("/api/suppliers", suppliersRouter);
+app.use("/api/merchant", purchaseOrdersRouter);
 
 // Health check
 app.get("/health", (_req, res) => {

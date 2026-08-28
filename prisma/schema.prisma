@@ -12,6 +12,16 @@ enum UserRole {
   buyer
   merchant
   admin
+  supplier
+}
+
+enum POStatus {
+  draft
+  sent
+  confirmed
+  shipped
+  received
+  cancelled
 }
 
 enum ProductSource {
@@ -91,6 +101,7 @@ model User {
   stores Store[] @relation("MerchantStores")
 
   orders Order[] @relation("BuyerOrders")
+  supplierProfile Supplier? @relation("SupplierUser")
 
   @@map("users")
 }
@@ -136,10 +147,11 @@ model Store {
   createdAt    DateTime    @default(now()) @map("created_at")
   updatedAt    DateTime    @updatedAt @map("updated_at")
 
-  owner    User      @relation("MerchantStores", fields: [ownerId], references: [id])
-  products Product[]
-  orders   Order[]
-  staff    StoreStaff[]
+  owner          User            @relation("MerchantStores", fields: [ownerId], references: [id])
+  products       Product[]
+  orders         Order[]
+  staff          StoreStaff[]
+  purchaseOrders PurchaseOrder[]
 
   @@index([ownerId])
   @@index([businessType])
@@ -197,8 +209,9 @@ model Product {
   createdAt   DateTime      @default(now()) @map("created_at")
   updatedAt   DateTime      @updatedAt @map("updated_at")
 
-  store       Store         @relation(fields: [storeId], references: [id])
-  orderItems  OrderItem[]
+  store              Store               @relation(fields: [storeId], references: [id])
+  orderItems         OrderItem[]
+  purchaseOrderItems PurchaseOrderItem[]
 
   @@index([storeId])
   @@index([storeId, name])
@@ -282,4 +295,97 @@ model Payment {
   @@index([razorpayOrderId])
   @@index([razorpayPaymentId])
   @@map("payments")
+}
+
+
+model Supplier {
+  id           String      @id @default(uuid())
+  userId       String?     @unique @map("user_id")
+  name         String
+  companyName  String?     @map("company_name")
+  phone        String
+  email        String?
+  category     String?
+  address      String?
+  city         String?
+  state        String?
+  pincode      String?
+  gstin        String?
+  rating       Float       @default(5.0)
+  paymentTerms String?     @map("payment_terms")
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+
+  user           User?             @relation("SupplierUser", fields: [userId], references: [id])
+  products       SupplierProduct[]
+  purchaseOrders PurchaseOrder[]
+
+  @@index([category])
+  @@index([city])
+  @@map("suppliers")
+}
+
+model SupplierProduct {
+  id             String      @id @default(uuid())
+  supplierId     String      @map("supplier_id")
+  name           String
+  description    String?
+  category       String
+  subcategory    String?
+  unit           ProductUnit @default(piece)
+  wholesalePrice Decimal     @map("wholesale_price") @db.Decimal(10, 2)
+  minOrderQty    Decimal     @default(1) @map("min_order_qty") @db.Decimal(10, 2)
+  sku            String?
+  imageUrl       String?     @map("image_url")
+  inStock        Boolean     @default(true) @map("in_stock")
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
+
+  supplier       Supplier    @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  @@index([supplierId])
+  @@index([category])
+  @@index([name])
+  @@map("supplier_products")
+}
+
+model PurchaseOrder {
+  id               String              @id @default(uuid())
+  poNumber         String              @unique @map("po_number")
+  storeId          String              @map("store_id")
+  supplierId       String              @map("supplier_id")
+  status           POStatus            @default(draft)
+  totalAmount      Decimal             @default(0) @map("total_amount") @db.Decimal(10, 2)
+  notes            String?
+  expectedDelivery DateTime?           @map("expected_delivery")
+  createdAt        DateTime            @default(now()) @map("created_at")
+  updatedAt        DateTime            @updatedAt @map("updated_at")
+
+  store            Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  supplier         Supplier            @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  items            PurchaseOrderItem[]
+
+  @@index([storeId])
+  @@index([supplierId])
+  @@index([status])
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderItem {
+  id                String        @id @default(uuid())
+  purchaseOrderId   String        @map("purchase_order_id")
+  productId         String?       @map("product_id")
+  supplierProductId String?       @map("supplier_product_id")
+  name              String
+  qty               Decimal       @db.Decimal(10, 2)
+  unitPrice         Decimal       @map("unit_price") @db.Decimal(10, 2)
+  totalPrice        Decimal       @map("total_price") @db.Decimal(10, 2)
+  createdAt         DateTime      @default(now()) @map("created_at")
+
+  purchaseOrder     PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  product           Product?      @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([purchaseOrderId])
+  @@index([productId])
+  @@map("purchase_order_items")
 }

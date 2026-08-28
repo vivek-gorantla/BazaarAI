@@ -129,11 +129,130 @@ const STORE_NAME_SUFFIXES = [
 async function clearDatabase() {
   console.log("Clearing existing data...");
   await prisma.payment.deleteMany();
+  await prisma.purchaseOrderItem.deleteMany();
+  await prisma.purchaseOrder.deleteMany();
   await prisma.orderItem.deleteMany();
   await prisma.order.deleteMany();
   await prisma.product.deleteMany();
+  await prisma.storeStaff.deleteMany();
   await prisma.store.deleteMany();
+  await prisma.supplierProduct.deleteMany();
+  await prisma.supplier.deleteMany();
   await prisma.user.deleteMany();
+}
+
+async function seedSuppliers() {
+  console.log("Seeding suppliers and wholesale catalogs...");
+
+  const supplier1 = await prisma.supplier.create({
+    data: {
+      name: "Farm Fresh Dairies",
+      companyName: "Farm Fresh Dairy Foods Pvt Ltd",
+      phone: "+919876543210",
+      email: "orders@farmfreshdairies.com",
+      category: "Dairy",
+      address: "Industrial Zone 4, Outer Ring Road",
+      city: "Bengaluru",
+      state: "Karnataka",
+      pincode: "560068",
+      gstin: "29AAAAA0000A1Z5",
+      rating: 4.9,
+      paymentTerms: "Net 15",
+      products: {
+        create: [
+          {
+            name: "Organic Whole Milk (1L)",
+            category: "Dairy",
+            unit: ProductUnit.litre,
+            wholesalePrice: new Prisma.Decimal(42.00),
+            minOrderQty: new Prisma.Decimal(20),
+            sku: "SUP-FLK-101",
+            imageUrl: "https://images.unsplash.com/photo-1550583724-b2692b85b150?w=500"
+          },
+          {
+            name: "Fresh Farm Butter (500g)",
+            category: "Dairy",
+            unit: ProductUnit.pack,
+            wholesalePrice: new Prisma.Decimal(210.00),
+            minOrderQty: new Prisma.Decimal(10),
+            sku: "SUP-BTR-102",
+            imageUrl: "https://images.unsplash.com/photo-1589985270826-4b7bb135bc9d?w=500"
+          }
+        ]
+      }
+    }
+  });
+
+  const supplier2 = await prisma.supplier.create({
+    data: {
+      name: "Global Spices & Grains",
+      companyName: "Global Spices & Agro Supplies Ltd",
+      phone: "+919876543211",
+      email: "b2b@globalspices.com",
+      category: "Grocery",
+      address: "APMC Wholesale Market, Yard 12",
+      city: "Mumbai",
+      state: "Maharashtra",
+      pincode: "400705",
+      gstin: "27BBBBA1111B2Z6",
+      rating: 4.8,
+      paymentTerms: "Net 30",
+      products: {
+        create: [
+          {
+            name: "Royal Basmati Rice (25kg Bag)",
+            category: "Grocery",
+            unit: ProductUnit.box,
+            wholesalePrice: new Prisma.Decimal(1850.00),
+            minOrderQty: new Prisma.Decimal(2),
+            sku: "SUP-RICE-201",
+            imageUrl: "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=500"
+          },
+          {
+            name: "Toor Dal Premium (10kg)",
+            category: "Grocery",
+            unit: ProductUnit.pack,
+            wholesalePrice: new Prisma.Decimal(950.00),
+            minOrderQty: new Prisma.Decimal(3),
+            sku: "SUP-DAL-202",
+            imageUrl: "https://images.unsplash.com/photo-1585994191611-72ec0b4e2f89?w=500"
+          }
+        ]
+      }
+    }
+  });
+
+  const supplier3 = await prisma.supplier.create({
+    data: {
+      name: "Organic Valley Co.",
+      companyName: "Organic Valley Trading House",
+      phone: "+919876543212",
+      email: "supply@organicvalley.in",
+      category: "Organic Foods",
+      address: "Eco Tech Park, Block C",
+      city: "Hyderabad",
+      state: "Telangana",
+      pincode: "500081",
+      gstin: "36CCCCC2222C3Z7",
+      rating: 5.0,
+      paymentTerms: "Advance / COD",
+      products: {
+        create: [
+          {
+            name: "Raw Wildflower Honey (500g)",
+            category: "Pantry",
+            unit: ProductUnit.bottle,
+            wholesalePrice: new Prisma.Decimal(320.00),
+            minOrderQty: new Prisma.Decimal(6),
+            sku: "SUP-HNY-301",
+            imageUrl: "https://images.unsplash.com/photo-1587049352846-4a222e784d38?w=500"
+          }
+        ]
+      }
+    }
+  });
+
+  return [supplier1, supplier2, supplier3];
 }
 
 async function seedUsers() {
@@ -343,6 +462,7 @@ async function main() {
   const stores = await seedStores(merchants);
   const products = await seedProducts(stores);
   await seedOrders(buyers, stores, products);
+  await seedSuppliers();
 
   console.log("Seeding complete.");
 }
