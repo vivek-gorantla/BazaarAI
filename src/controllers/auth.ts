@@ -16,11 +16,11 @@ export async function login(req: Request, res: Response) {
     throw new ApiError(401, "UNAUTHORIZED", "User not found. Please sign up.");
   }
 
-  if (role && user.role !== role) {
+  const expectedRole = role === "customer" ? "buyer" : role;
+  if (expectedRole && user.role !== expectedRole) {
     throw new ApiError(403, "FORBIDDEN", `Only ${role}s can login here.`);
   }
 
-  // Return simple auth token (user id for now)
   res.json({
     success: true,
     data: {
@@ -29,7 +29,7 @@ export async function login(req: Request, res: Response) {
         id: user.id,
         name: user.name,
         phone: user.phone,
-        role: user.role,
+        role: user.role === "buyer" ? "customer" : user.role,
         preferredLanguage: user.preferredLanguage,
       },
     },
@@ -47,7 +47,6 @@ export async function signup(req: Request, res: Response) {
     throw new ApiError(400, "INVALID_REQUEST", "Name is required");
   }
 
-  // Check if user already exists
   const existingUser = await prisma.user.findUnique({
     where: { phone },
   });
@@ -57,13 +56,13 @@ export async function signup(req: Request, res: Response) {
   }
 
   const finalLanguage = translateContent ? preferredLanguage : "en";
+  const prismaRole = (role === "customer" ? "buyer" : role) as any;
 
-  // Create new user
   const user = await prisma.user.create({
     data: {
       phone,
       name,
-      role,
+      role: prismaRole,
       preferredLanguage: finalLanguage,
     },
   });
@@ -76,7 +75,7 @@ export async function signup(req: Request, res: Response) {
         id: user.id,
         name: user.name,
         phone: user.phone,
-        role: user.role,
+        role: user.role === "buyer" ? "customer" : user.role,
         preferredLanguage: user.preferredLanguage,
       },
     },

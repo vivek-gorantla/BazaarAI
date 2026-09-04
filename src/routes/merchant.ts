@@ -13,7 +13,11 @@ import {
   postStaff,
   getStaff,
   deleteStaff,
-  getStoreDashboard
+  getStoreDashboard,
+  getStoreAnalytics,
+  getStorePayments,
+  getStoreProfitLoss,
+  getStoreCustomers,
 } from "../controllers/merchant.js";
 import { uploadAudio } from "../controllers/onBoardingAgent.js";
 import multer from "multer";
@@ -35,5 +39,9 @@ merchantRouter.post("/stores/:storeId/staff", asyncHandler(postStaff));
 merchantRouter.get("/stores/:storeId/staff", asyncHandler(getStaff));
 merchantRouter.delete("/stores/:storeId/staff/:staffId", asyncHandler(deleteStaff));
 merchantRouter.get("/stores/:storeId/dashboard", asyncHandler(getStoreDashboard));
+merchantRouter.get("/stores/:storeId/analytics", asyncHandler(getStoreAnalytics));
+merchantRouter.get("/stores/:storeId/payments", asyncHandler(getStorePayments));
+merchantRouter.get("/stores/:storeId/profit-loss", asyncHandler(getStoreProfitLoss));
+merchantRouter.get("/stores/:storeId/customers", asyncHandler(getStoreCustomers));
 
 export default merchantRouter;

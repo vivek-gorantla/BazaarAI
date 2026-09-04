@@ -11,7 +11,7 @@ export class ApiError extends Error {
 }
 
 export function asyncHandler(
-  handler: (request: Request, response: Response, next: NextFunction) => Promise<void>
+  handler: (request: Request, response: Response, next: NextFunction) => Promise<any>
 ) {
   return (request: Request, response: Response, next: NextFunction): void => {
     void handler(request, response, next).catch(next);

@@ -56,7 +56,11 @@ export async function listProducts(storeId: string, ownerId: string, query: Reco
   const limit = Math.min(100, Math.max(1, Number(query.limit) || 20));
   const where: Prisma.ProductWhereInput = { storeId };
   if (typeof query.category === "string") where.category = query.category;
-  if (typeof query.active === "string") where.isActive = query.active === "true";
+  if (typeof query.active === "string") {
+    where.isActive = query.active === "true";
+  } else if (query.includeInactive !== "true") {
+    where.isActive = true;
+  }
   if (typeof query.search === "string" && query.search) where.OR = [{ name: { contains: query.search, mode: "insensitive" } }, { description: { contains: query.search, mode: "insensitive" } }];
   if (typeof query.subcategory === "string") where.subcategory = query.subcategory;
   const [data, total] = await Promise.all([prisma.product.findMany({ where, skip: (page - 1) * limit, take: limit, orderBy: { createdAt: "desc" } }), prisma.product.count({ where })]);
@@ -83,8 +87,13 @@ export async function updateProduct(productId: string, ownerId: string, body: un
 
 export async function removeProduct(productId: string, ownerId: string) {
   await ownedProduct(productId, ownerId);
-  await prisma.product.update({ where: { id: productId }, data: { isActive: false } });
-  return { message: "Product removed from catalog" };
+  try {
+    await prisma.product.delete({ where: { id: productId } });
+    return { message: "Product deleted permanently from database" };
+  } catch (err) {
+    await prisma.product.update({ where: { id: productId }, data: { isActive: false } });
+    return { message: "Product deactivated from catalog" };
+  }
 }
 
 export async function updateStock(productId: string, ownerId: string, body: unknown) {

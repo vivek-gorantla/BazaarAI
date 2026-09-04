@@ -102,6 +102,7 @@ model User {
 
   orders Order[] @relation("BuyerOrders")
   supplierProfile Supplier? @relation("SupplierUser")
+  carts  Cart[]
 
   @@map("users")
 }
@@ -152,6 +153,7 @@ model Store {
   orders         Order[]
   staff          StoreStaff[]
   purchaseOrders PurchaseOrder[]
+  carts          Cart[]
 
   @@index([ownerId])
   @@index([businessType])
@@ -212,6 +214,7 @@ model Product {
   store              Store               @relation(fields: [storeId], references: [id])
   orderItems         OrderItem[]
   purchaseOrderItems PurchaseOrderItem[]
+  carts              Cart[]
 
   @@index([storeId])
   @@index([storeId, name])
@@ -388,4 +391,25 @@ model PurchaseOrderItem {
   @@index([purchaseOrderId])
   @@index([productId])
   @@map("purchase_order_items")
+}
+
+model Cart {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  storeId   String   @map("store_id")
+  productId String   @map("product_id")
+  qty       Decimal  @default(1) @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId, storeId])
+  @@index([userId])
+  @@index([storeId])
+  @@index([productId])
+  @@map("carts")
 }

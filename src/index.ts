@@ -9,14 +9,32 @@ import onboardingRouter from "./routes/onboarding.js";
 import ordersRouter from "./routes/orders.js";
 import suppliersRouter from "./routes/suppliers.js";
 import purchaseOrdersRouter from "./routes/purchaseOrders.js";
+import parserRouter from "./routes/parserTest.js";
+import agentRouter from "./routes/agent.js";
+import customerRouter from "./customer/customer.route.js";
 import { errorHandler } from "./middleware/errors.js";
 import { attachWebSocketServer } from "./websocket/agentSocket.js";
 
 const app = express();
 const port = Number(process.env.PORT) || 3000;
 
-app.use(express.json());
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization, x-user-id");
+  if (req.method === "OPTIONS") {
+    res.sendStatus(200);
+    return;
+  }
+  next();
+});
+
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
+app.use(express.text({ limit: "50mb", type: ["text/*", "application/json"] }));
 app.use("/api/auth", authRouter);
+
+app.use("/api/customer", customerRouter);
 app.use("/api/merchant", merchantRouter);
 app.use("/api/catalog", catalogRouter);
 app.use("/api/inventory", inventoryRouter);
@@ -24,15 +42,18 @@ app.use("/api/onboarding", onboardingRouter);
 app.use("/api/merchant", ordersRouter);
 app.use("/api/suppliers", suppliersRouter);
 app.use("/api/merchant", purchaseOrdersRouter);
+app.use("/api/parse", parserRouter);
+app.use("/api/agent", agentRouter);
+
 
 // Health check
 app.get("/health", (_req, res) => {
-    res.json({ status: "ok" });
+  res.json({ status: "ok" });
 });
 
 // Hello World endpoint
 app.get("/", (_req, res) => {
-    res.send("Hello World!");
+  res.send("Hello World!");
 });
 
 app.use(errorHandler);
@@ -42,6 +63,6 @@ const server = http.createServer(app);
 attachWebSocketServer(server);
 
 server.listen(port, () => {
-    console.log(`Server running at http://localhost:${port}`);
-    console.log(`WebSocket agent available at ws://localhost:${port}/ws/agent`);
+  console.log(`Server running at http://localhost:${port}`);
+  console.log(`WebSocket agent available at ws://localhost:${port}/ws/agent`);
 });

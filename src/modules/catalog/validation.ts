@@ -29,8 +29,21 @@ export function validateProduct(body: unknown, partial: boolean) {
   const category = stringField(input.category, "category", !partial);
   const unit = stringField(input.unit, "unit", !partial);
   if (unit && !units.has(unit as ProductUnit)) throw new ApiError(400, "INVALID_REQUEST", "unit is invalid");
-  const source = stringField(input.source, "source");
-  if (source && !sources.has(source as ProductSource)) throw new ApiError(400, "INVALID_REQUEST", "source is invalid");
+  let source = stringField(input.source, "source");
+  if (source) {
+    const normalized = source.toLowerCase();
+    if (sources.has(normalized as ProductSource)) {
+      source = normalized;
+    } else if (normalized.includes("voice")) {
+      source = "voice";
+    } else if (normalized.includes("image") || normalized.includes("camera") || normalized.includes("snap")) {
+      source = "image";
+    } else if (normalized.includes("excel") || normalized.includes("csv")) {
+      source = "excel";
+    } else {
+      source = "manual";
+    }
+  }
   const price = numberField(input.price, "price", !partial);
   const stockQty = numberField(input.stockQty, "stockQty");
   if (input.isActive !== undefined && typeof input.isActive !== "boolean") throw new ApiError(400, "INVALID_REQUEST", "isActive must be boolean");

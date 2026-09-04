@@ -3,6 +3,10 @@ import { getMerchantProfile, updateMerchantProfile } from "../modules/merchant/p
 import { createStore, getStore, listStores, updateStore } from "../modules/merchant/stores.js";
 import { inviteStaff, listStaff, removeStaff } from "../modules/merchant/staff.js";
 import { getDashboard } from "../modules/merchant/dashboard.js";
+import { getAnalytics } from "../modules/merchant/analytics.js";
+import { getPayments } from "../modules/merchant/payments.js";
+import { getProfitLoss } from "../modules/merchant/profit-loss.js";
+import { getCustomers } from "../modules/merchant/customers.js";
 import type { AuthenticatedRequest } from "../middleware/auth.js";
 
 function merchantId(request: Request): string {
@@ -69,3 +73,18 @@ export async function getStoreDashboard(request: Request, response: Response): P
   response.json({ success: true, data: await getDashboard(storeId(request), merchantId(request)) });
 }
 
+export async function getStoreAnalytics(request: Request, response: Response): Promise<void> {
+  response.json({ success: true, data: await getAnalytics(storeId(request), merchantId(request)) });
+}
+
+export async function getStorePayments(request: Request, response: Response): Promise<void> {
+  response.json({ success: true, data: await getPayments(storeId(request), merchantId(request)) });
+}
+
+export async function getStoreProfitLoss(request: Request, response: Response): Promise<void> {
+  response.json({ success: true, data: await getProfitLoss(storeId(request), merchantId(request)) });
+}
+
+export async function getStoreCustomers(request: Request, response: Response): Promise<void> {
+  response.json({ success: true, data: await getCustomers(storeId(request), merchantId(request)) });
+}
