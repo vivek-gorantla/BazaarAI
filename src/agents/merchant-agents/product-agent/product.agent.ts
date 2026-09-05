@@ -7,6 +7,7 @@ import { deleteProductTool } from "./tools/delete-product.tool.js";
 import { getProductTool } from "./tools/getProduct.tool.js";
 import { searchProductsTool } from "./tools/search-products.tool.js";
 import { updateProductTool } from "./tools/update-product.tool.js";
+import { auditLogger } from "../../../lib/kafka-audit.js";
 
 export interface ProductAgentOptions {
     storeId?: string;
@@ -39,6 +40,11 @@ export class ProductAgent {
             ...conversationHistory,
             { role: "user", content: message },
         ];
+
+        auditLogger.logAgentEvent("AGENT_STARTED", {
+            agentName: "ProductAgent",
+            message,
+        }, { storeId });
 
         let response = await openai.responses.create({
             model: DEPLOYMENT,
@@ -76,6 +82,11 @@ export class ProductAgent {
                     args.storeId = storeId;
                 }
 
+                auditLogger.logAgentEvent("TOOL_CALLED", {
+                    toolName,
+                    args,
+                }, { storeId, agentName: "ProductAgent" });
+
                 let toolResult: unknown;
                 try {
                     switch (toolName) {
@@ -105,6 +116,11 @@ export class ProductAgent {
                     toolResult = { error: errorMessage };
                 }
 
+                auditLogger.logAgentEvent("TOOL_OUTPUT", {
+                    toolName,
+                    toolResult,
+                }, { storeId, agentName: "ProductAgent" });
+
                 functionOutputs.push({
                     type: "function_call_output",
                     call_id: callId,
@@ -129,6 +145,11 @@ export class ProductAgent {
             .flatMap((o: any) => o.content.filter((c: any) => c.type === "output_text").map((c: any) => c.text))
             .join("\n")
             .trim();
+
+        auditLogger.logAgentEvent("AGENT_COMPLETED", {
+            agentName: "ProductAgent",
+            response: textOutput,
+        }, { storeId });
 
         return textOutput || "Product operation completed.";
     }

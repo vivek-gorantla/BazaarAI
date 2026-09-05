@@ -14,6 +14,7 @@ import { getOutOfStockTool } from "./tools/get-outof-stcok.tool.js";
 import { getStockTool } from "./tools/get-stock.tool.js";
 import { increaseStockTool } from "./tools/increase-stock.tool.js";
 import { setStockTool } from "./tools/set-stock.tool.js";
+import { auditLogger } from "../../../lib/kafka-audit.js";
 
 export interface InventoryAgentOptions {
     storeId?: string;
@@ -54,6 +55,11 @@ export class InventoryAgent {
             { role: "user", content: message },
         ];
 
+        auditLogger.logAgentEvent("AGENT_STARTED", {
+            agentName: "InventoryAgent",
+            message,
+        }, { storeId });
+
         let response = await openai.responses.create({
             model: DEPLOYMENT,
             input: messages,
@@ -89,6 +95,11 @@ export class InventoryAgent {
                 if (storeId && !args.storeId) {
                     args.storeId = storeId;
                 }
+
+                auditLogger.logAgentEvent("TOOL_CALLED", {
+                    toolName,
+                    args,
+                }, { storeId, agentName: "InventoryAgent" });
 
                 let toolResult: unknown;
                 try {
@@ -137,6 +148,11 @@ export class InventoryAgent {
                     toolResult = { error: errorMessage };
                 }
 
+                auditLogger.logAgentEvent("TOOL_OUTPUT", {
+                    toolName,
+                    toolResult,
+                }, { storeId, agentName: "InventoryAgent" });
+
                 functionOutputs.push({
                     type: "function_call_output",
                     call_id: callId,
@@ -161,6 +177,11 @@ export class InventoryAgent {
             .flatMap((o: any) => o.content.filter((c: any) => c.type === "output_text").map((c: any) => c.text))
             .join("\n")
             .trim();
+
+        auditLogger.logAgentEvent("AGENT_COMPLETED", {
+            agentName: "InventoryAgent",
+            response: textOutput,
+        }, { storeId });
 
         return textOutput || "Inventory operation completed.";
     }

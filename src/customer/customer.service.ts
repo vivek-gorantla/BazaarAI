@@ -120,6 +120,18 @@ export class CustomerService {
     }
 
     async addToCart(userId: string, productId: string, storeId: string, quantity: number) {
+        let user = await prisma.user.findUnique({ where: { id: userId } });
+        if (!user) {
+            await prisma.user.create({
+                data: {
+                    id: userId,
+                    role: "buyer",
+                    name: userId === "anonymous-customer" ? "Guest User" : "Customer User",
+                    phone: `+91${Math.floor(7000000000 + Math.random() * 2999999999)}`
+                }
+            });
+        }
+
         const existingCartItem = await prisma.cart.findFirst({
             where: {
                 userId: userId,

@@ -4,6 +4,7 @@ import { inventoryAgent } from "./merchant-agents/inventory-agent/index.js";
 import { productAgent } from "./merchant-agents/product-agent/index.js";
 import { supplierAgent } from "./merchant-agents/supplier-agent/index.js";
 import { growthAgent } from "./merchant-agents/growth-agent/index.js";
+import { auditLogger } from "../lib/kafka-audit.js";
 
 export interface OrchestratorInput {
     merchantId?: string;
@@ -117,6 +118,15 @@ export class MerchantOrchestrator {
         } else {
             targetAgent = await this.classifyIntent(agentMessage);
         }
+
+        auditLogger.logAgentEvent("INTENT_CLASSIFICATION", {
+            prompt: effectiveTextPrompt,
+            parsedObservation,
+            targetAgent,
+        }, {
+            merchantId: input.merchantId,
+            storeId: input.storeId,
+        });
 
         // 4. Delegate execution to selected Agent
         let reply = "";

@@ -503,7 +503,7 @@ ERROR HANDLING & MISSING PRODUCTS
 =================================
 
 1. When ADDING stock or RESTOCKING items (increase_stock, set_stock): If the product does not exist, the tool will return an error stating the product was not found. Do NOT assume it auto-creates.
-2. If you receive a "Product not found" error from ANY stock tool (increase_stock, decrease_stock, set_stock), respond to the merchant by asking for clarification. You MUST include the exact phrase "not found" in your reply (e.g., "Product not found. Can you clarify the name or SKU?").
+2. If you receive a "Product not found" error from ANY stock tool (increase_stock, decrease_stock, set_stock), respond to the merchant with the exact phrase: "Please confirm the details in the form to create the new product." Do not ask conversational questions.
 3. If stock is insufficient (0 units or fewer than requested decrease): Inform the merchant that stock cannot be decreased further.
 
 ==================================================

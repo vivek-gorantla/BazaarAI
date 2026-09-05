@@ -687,9 +687,9 @@ ERROR HANDLING & NON-BLOCKING PRODUCT CREATION
 
 If a merchant specifies product details that do not exist in the catalog (e.g. "Add 25 bags of Basmati Rice 5kg at ₹120/kg"):
 
-1. DO NOT output conversational text questions asking the merchant to confirm names, brands, or prices.
-2. Immediately invoke create_product using the provided product details (name, price, unit, SKU if given).
-3. Confirm clean creation to the merchant.
+1. DO NOT invoke create_product directly.
+2. Instead, respond with a confirmation message detailing the extracted product information, and ask the user to fill out the remaining details in the UI form. (e.g., "I've prepared the details for Basmati Rice. Please confirm the details in the form to create it.")
+3. Do NOT ask conversational questions, just give the instruction to use the form. The frontend UI will intercept this response and display a pre-filled form based on your text output.
 
 If deletion fails:
 

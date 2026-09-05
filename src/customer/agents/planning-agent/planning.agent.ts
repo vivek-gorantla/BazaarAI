@@ -2,6 +2,7 @@ import { DEPLOYMENT, openai } from "../../../../model/model-config.js";
 import { prompt } from "./prompt.js";
 import { getCustomerContextTool } from "./tools/get-customer-context.tool.js";
 import { saveShoppingPlanTool } from "./tools/save-shopping-plan.tool.js";
+import { auditLogger } from "../../../lib/kafka-audit.js";
 
 export interface PlanningAgentOptions {
     customerId?: string;
@@ -57,6 +58,8 @@ export class PlanningAgent {
                 const toolName = fnItem.name;
                 const args = fnItem.arguments ? JSON.parse(fnItem.arguments) : {};
 
+                auditLogger.logAgentEvent("TOOL_CALLED", { toolName, args }, { userId: customerId, agentName: "Planning Agent" });
+
                 let toolResult: unknown;
                 try {
                     switch (toolName) {
@@ -76,6 +79,8 @@ export class PlanningAgent {
                     const errorMessage = err instanceof Error ? err.message : "Execution failed";
                     toolResult = { error: errorMessage };
                 }
+
+                auditLogger.logAgentEvent("TOOL_OUTPUT", { toolName, result: toolResult }, { userId: customerId, agentName: "Planning Agent" });
 
                 functionOutputs.push({
                     type: "function_call_output",
@@ -107,5 +112,8 @@ export class PlanningAgent {
 
 export const planningAgent = new PlanningAgent();
 export async function runPlanningAgent(message: string, customerId?: string, history: any[] = []): Promise<string> {
-    return planningAgent.execute(message, { customerId, conversationHistory: history });
+    auditLogger.logAgentEvent("AGENT_STARTED", { agentName: "Planning Agent", task: message }, { userId: customerId, agentName: "Planning Agent" });
+    const result = await planningAgent.execute(message, { customerId, conversationHistory: history });
+    auditLogger.logAgentEvent("AGENT_COMPLETED", { agentName: "Planning Agent", result: result.substring(0, 500) }, { userId: customerId, agentName: "Planning Agent" });
+    return result;
 }

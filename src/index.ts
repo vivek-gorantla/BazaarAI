@@ -11,9 +11,12 @@ import suppliersRouter from "./routes/suppliers.js";
 import purchaseOrdersRouter from "./routes/purchaseOrders.js";
 import parserRouter from "./routes/parserTest.js";
 import agentRouter from "./routes/agent.js";
-import customerRouter from "./customer/customer.route.js";
+import customerRouter from "./routes/customer.js";
+import customerChatRouter from "./customer/customer.route.js";
 import { errorHandler } from "./middleware/errors.js";
 import { attachWebSocketServer } from "./websocket/agentSocket.js";
+import { systemAuditMiddleware } from "./middleware/system-audit.js";
+import auditRouter from "./routes/audit.routes.js";
 
 const app = express();
 const port = Number(process.env.PORT) || 3000;
@@ -32,9 +35,14 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 app.use(express.text({ limit: "50mb", type: ["text/*", "application/json"] }));
+
+// Apply system audit middleware to log API requests
+app.use(systemAuditMiddleware);
+
 app.use("/api/auth", authRouter);
 
 app.use("/api/customer", customerRouter);
+app.use("/api/customer", customerChatRouter);
 app.use("/api/merchant", merchantRouter);
 app.use("/api/catalog", catalogRouter);
 app.use("/api/inventory", inventoryRouter);
@@ -44,6 +52,7 @@ app.use("/api/suppliers", suppliersRouter);
 app.use("/api/merchant", purchaseOrdersRouter);
 app.use("/api/parse", parserRouter);
 app.use("/api/agent", agentRouter);
+app.use("/api/audit", auditRouter);
 
 
 // Health check

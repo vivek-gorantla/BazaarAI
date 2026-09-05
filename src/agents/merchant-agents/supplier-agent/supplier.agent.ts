@@ -10,6 +10,7 @@ import { getSupplierOrdersTool } from "./tools/get-supplier-orders.tool.js";
 import { getSupplierTool } from "./tools/get-supplier.tool.js";
 import { searchSuppliersTool } from "./tools/search-suppliers.tool.js";
 import { updateSupplierTool } from "./tools/update-supplier.js";
+import { auditLogger } from "../../../lib/kafka-audit.js";
 
 export interface SupplierAgentOptions {
     storeId?: string;
@@ -45,6 +46,11 @@ export class SupplierAgent {
             ...conversationHistory,
             { role: "user", content: message },
         ];
+
+        auditLogger.logAgentEvent("AGENT_STARTED", {
+            agentName: "SupplierAgent",
+            message,
+        }, { storeId });
 
         let response = await openai.responses.create({
             model: DEPLOYMENT,
@@ -82,6 +88,11 @@ export class SupplierAgent {
                     args.storeId = storeId;
                 }
 
+                auditLogger.logAgentEvent("TOOL_CALLED", {
+                    toolName,
+                    args,
+                }, { storeId, agentName: "SupplierAgent" });
+
                 let toolResult: unknown;
                 try {
                     switch (toolName) {
@@ -117,6 +128,11 @@ export class SupplierAgent {
                     toolResult = { error: errorMessage };
                 }
 
+                auditLogger.logAgentEvent("TOOL_OUTPUT", {
+                    toolName,
+                    toolResult,
+                }, { storeId, agentName: "SupplierAgent" });
+
                 functionOutputs.push({
                     type: "function_call_output",
                     call_id: callId,
@@ -141,6 +157,11 @@ export class SupplierAgent {
             .flatMap((o: any) => o.content.filter((c: any) => c.type === "output_text").map((c: any) => c.text))
             .join("\n")
             .trim();
+
+        auditLogger.logAgentEvent("AGENT_COMPLETED", {
+            agentName: "SupplierAgent",
+            response: textOutput,
+        }, { storeId });
 
         return textOutput || "Supplier operation completed.";
     }

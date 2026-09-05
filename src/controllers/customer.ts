@@ -299,7 +299,9 @@ export const getCart = async (req: Request, res: Response) => {
       storeId: item.storeId,
       quantity: Number(item.qty ?? 1),
     }));
-    res.json({ success: true, data: mapped });
+    const sessionCart = (global as any).__sessionCart || [];
+    // Merge database cart with session cart for mocked products
+    res.json({ success: true, data: [...mapped, ...sessionCart] });
   } catch (error) {
     res.status(500).json({ success: false, error: { message: (error as Error).message } });
   }
@@ -326,6 +328,20 @@ export const addToCart = async (req: Request, res: Response) => {
       res.json({ success: true, data: existing });
       return;
     }
+
+    // Ensure user exists
+    let user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      await prisma.user.create({
+        data: {
+          id: userId,
+          role: "buyer",
+          name: userId === "anonymous-customer" ? "Guest User" : "Customer User",
+          phone: `+91${Math.floor(7000000000 + Math.random() * 2999999999)}`
+        }
+      });
+    }
+
     // Upsert in Prisma cart
     const existing = await prisma.cart.findFirst({ where: { userId, productId } });
     if (existing) {
@@ -363,11 +379,23 @@ export const updateCartQuantity = async (req: Request, res: Response) => {
         await prisma.cart.update({ where: { id: cartItemId }, data: { qty: newQty } });
       }
     }
+    
+    let sessionCart = (global as any).__sessionCart || [];
+    const sessionItem = sessionCart.find((i: any) => i.id === cartItemId || i.productId === cartItemId);
+    if (sessionItem) {
+      sessionItem.quantity = Number(sessionItem.quantity) + Number(delta);
+      if (sessionItem.quantity <= 0) {
+        sessionCart = sessionCart.filter((i: any) => i.id !== cartItemId && i.productId !== cartItemId);
+      }
+      (global as any).__sessionCart = sessionCart;
+    }
+
     const cartItems = await prisma.cart.findMany({
       where: { userId },
       include: { product: true, store: true }
     });
-    res.json({ success: true, data: cartItems.map(i => ({ id: i.id, productId: i.productId, title: i.product?.name, price: Number(i.product?.price ?? 0), quantity: Number(i.qty), storeName: i.store?.name })) });
+    const mapped = cartItems.map(i => ({ id: i.id, productId: i.productId, title: i.product?.name, price: Number(i.product?.price ?? 0), quantity: Number(i.qty), storeName: i.store?.name }));
+    res.json({ success: true, data: [...mapped, ...sessionCart] });
   } catch (error) {
     res.status(500).json({ success: false, error: { message: (error as Error).message } });
   }
@@ -378,11 +406,17 @@ export const removeFromCart = async (req: Request, res: Response) => {
   const cartItemId = String(req.params.id);
   try {
     await prisma.cart.deleteMany({ where: { id: cartItemId, userId } });
+    
+    let sessionCart = (global as any).__sessionCart || [];
+    sessionCart = sessionCart.filter((i: any) => i.id !== cartItemId && i.productId !== cartItemId);
+    (global as any).__sessionCart = sessionCart;
+
     const cartItems = await prisma.cart.findMany({
       where: { userId },
       include: { product: true, store: true }
     });
-    res.json({ success: true, data: cartItems.map(i => ({ id: i.id, productId: i.productId, title: i.product?.name, price: Number(i.product?.price ?? 0), quantity: Number(i.qty), storeName: i.store?.name })) });
+    const mapped = cartItems.map(i => ({ id: i.id, productId: i.productId, title: i.product?.name, price: Number(i.product?.price ?? 0), quantity: Number(i.qty), storeName: i.store?.name }));
+    res.json({ success: true, data: [...mapped, ...sessionCart] });
   } catch (error) {
     res.status(500).json({ success: false, error: { message: (error as Error).message } });
   }
@@ -613,7 +647,7 @@ export const postOrder = async (req: Request, res: Response) => {
         orderId: razorpayOrder.id,
         amount: razorpayOrder.amount,
         currency: razorpayOrder.currency,
-        keyId: process.env.RAZORPAY_KEY_ID,
+        keyId: process.env.RAZORPAY_KEY_ID || process.env.RAZORPAY_API_KEY,
       },
 
       data: {

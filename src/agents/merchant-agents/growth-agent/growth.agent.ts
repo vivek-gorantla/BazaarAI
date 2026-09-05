@@ -5,9 +5,9 @@ import { campaignOrchestrationTool } from "./tools/campaign-orchestration.tool.j
 import { createUpsellTool } from "./tools/create-upsell.tool.js";
 import { createCrossSellTool } from "./tools/create-cross-sell.tool.js";
 import { conversationalCheckoutTool } from "./tools/conversational-checkout.tool.js";
-// We also import search tool so the agent can find product IDs before checkout/upsell
 import { searchProductsTool } from "../product-agent/tools/search-products.tool.js";
 import ProductService from "../../services/product.service.js";
+import { auditLogger } from "../../../lib/kafka-audit.js";
 
 export interface GrowthAgentOptions {
     storeId?: string;
@@ -40,6 +40,11 @@ export class GrowthAgent {
             { role: "user", content: message },
         ];
 
+        auditLogger.logAgentEvent("AGENT_STARTED", {
+            agentName: "GrowthAgent",
+            message,
+        }, { storeId });
+
         let response = await openai.responses.create({
             model: DEPLOYMENT,
             input: messages,
@@ -68,6 +73,11 @@ export class GrowthAgent {
                     args.storeId = storeId;
                 }
 
+                auditLogger.logAgentEvent("TOOL_CALLED", {
+                    toolName,
+                    args,
+                }, { storeId, agentName: "GrowthAgent" });
+
                 let toolResult: unknown;
                 try {
                     switch (toolName) {
@@ -94,6 +104,11 @@ export class GrowthAgent {
                     toolResult = { error: errorMessage };
                 }
 
+                auditLogger.logAgentEvent("TOOL_OUTPUT", {
+                    toolName,
+                    toolResult,
+                }, { storeId, agentName: "GrowthAgent" });
+
                 functionOutputs.push({
                     type: "function_call_output",
                     call_id: callId,
@@ -114,6 +129,11 @@ export class GrowthAgent {
             .flatMap((o: any) => o.content.filter((c: any) => c.type === "output_text").map((c: any) => c.text))
             .join("\n")
             .trim();
+
+        auditLogger.logAgentEvent("AGENT_COMPLETED", {
+            agentName: "GrowthAgent",
+            response: textOutput,
+        }, { storeId });
 
         return textOutput || "Growth operation completed.";
     }

@@ -9,6 +9,7 @@ import { runPaymentAgent } from "./agents/payment-agent/payment.agent.js";
 import { runOrderAgent } from "./agents/order-agent/order.agent.js";
 import { runSupportAgent } from "./agents/support-agent/support.agent.js";
 import { runRecommendationAgent } from "./agents/recommendation-agent/recommendation.agent.js";
+import { auditLogger } from "../lib/kafka-audit.js";
 
 async function CustomerAgentOrchestrator(userId: string, userQuery: string, history: any[] = [], res?: any) {
     const response = await openai.responses.create({
@@ -46,6 +47,13 @@ async function CustomerAgentOrchestrator(userId: string, userQuery: string, hist
         
         console.log("Routed to Agent:", agentName);
 
+        auditLogger.logAgentEvent("INTENT_CLASSIFICATION", {
+            prompt: userQuery,
+            targetAgent: agentName,
+        }, {
+            userId: userId,
+        });
+
         if (agentName === "Cart Agent") {
             const cartResponse = await CartAgent({ userId, Query: userQuery }, history);
             if (res) {
@@ -59,31 +67,31 @@ async function CustomerAgentOrchestrator(userId: string, userQuery: string, hist
             return JSON.stringify(discoveryResponse);
         } else if (agentName === "Planning Agent") {
             const result = await runPlanningAgent(userQuery, userId, history);
-            if (res) { res.write(`data: ${JSON.stringify({ textChunk: JSON.stringify(result), done: true })}\n\n`); res.end(); }
+            if (res) { res.write(`data: ${JSON.stringify({ textChunk: typeof result === 'string' ? result : JSON.stringify(result), done: true })}\n\n`); res.end(); }
             return result;
         } else if (agentName === "Recommendation Agent") {
             const result = await runRecommendationAgent(userQuery, userId, history);
-            if (res) { res.write(`data: ${JSON.stringify({ textChunk: JSON.stringify(result), done: true })}\n\n`); res.end(); }
+            if (res) { res.write(`data: ${JSON.stringify({ textChunk: typeof result === 'string' ? result : JSON.stringify(result), done: true })}\n\n`); res.end(); }
             return result;
         } else if (agentName === "Purchase Agent") {
             const result = await runPurchaseAgent(userQuery, userId, history);
-            if (res) { res.write(`data: ${JSON.stringify({ textChunk: JSON.stringify(result), done: true })}\n\n`); res.end(); }
+            if (res) { res.write(`data: ${JSON.stringify({ textChunk: typeof result === 'string' ? result : JSON.stringify(result), done: true })}\n\n`); res.end(); }
             return result;
         } else if (agentName === "Checkout Agent") {
             const result = await runCheckoutAgent(userQuery, userId, history);
-            if (res) { res.write(`data: ${JSON.stringify({ textChunk: JSON.stringify(result), done: true })}\n\n`); res.end(); }
+            if (res) { res.write(`data: ${JSON.stringify({ textChunk: typeof result === 'string' ? result : JSON.stringify(result), done: true })}\n\n`); res.end(); }
             return result;
         } else if (agentName === "Payment Agent") {
             const result = await runPaymentAgent(userQuery, userId, history);
-            if (res) { res.write(`data: ${JSON.stringify({ textChunk: JSON.stringify(result), done: true })}\n\n`); res.end(); }
+            if (res) { res.write(`data: ${JSON.stringify({ textChunk: typeof result === 'string' ? result : JSON.stringify(result), done: true })}\n\n`); res.end(); }
             return result;
         } else if (agentName === "Order Agent") {
             const result = await runOrderAgent(userQuery, userId, history);
-            if (res) { res.write(`data: ${JSON.stringify({ textChunk: JSON.stringify(result), done: true })}\n\n`); res.end(); }
+            if (res) { res.write(`data: ${JSON.stringify({ textChunk: typeof result === 'string' ? result : JSON.stringify(result), done: true })}\n\n`); res.end(); }
             return result;
         } else if (agentName === "Support Agent") {
             const result = await runSupportAgent(userQuery, userId, history);
-            if (res) { res.write(`data: ${JSON.stringify({ textChunk: JSON.stringify(result), done: true })}\n\n`); res.end(); }
+            if (res) { res.write(`data: ${JSON.stringify({ textChunk: typeof result === 'string' ? result : JSON.stringify(result), done: true })}\n\n`); res.end(); }
             return result;
         }
 

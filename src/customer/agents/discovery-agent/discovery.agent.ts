@@ -7,6 +7,7 @@ import { checkavailabilityTool } from "./tools/checkavailability.tool.js";
 import { searchcategoriesTool } from "./tools/searchcategories.tool.js";
 import { CustomerService } from "../../customer.service.js";
 import { ChatCompletionMessageParam } from "openai/resources/chat/completions";
+import { auditLogger } from "../../../lib/kafka-audit.js";
 
 const discoveryTools = [
     searchproductsTool,
@@ -17,6 +18,7 @@ const discoveryTools = [
 ];
 
 export async function DiscoveryAgent(data: { userId: string; Query: string }, history: any[] = [], res?: any) {
+    auditLogger.logAgentEvent("AGENT_STARTED", { agentName: "Discovery Agent", task: data.Query }, { userId: data.userId, agentName: "Discovery Agent" });
     const customerService = new CustomerService();
 
     const messages: ChatCompletionMessageParam[] = [
@@ -88,6 +90,7 @@ export async function DiscoveryAgent(data: { userId: string; Query: string }, hi
 
             for (const toolCall of validToolCalls) {
                 const args = JSON.parse(toolCall.function.arguments);
+                auditLogger.logAgentEvent("TOOL_CALLED", { toolName: toolCall.function.name, args }, { userId: data.userId, agentName: "Discovery Agent" });
                 let toolResult: any;
 
                 try {
@@ -116,6 +119,8 @@ export async function DiscoveryAgent(data: { userId: string; Query: string }, hi
                     toolResult = { error: error.message };
                 }
 
+                auditLogger.logAgentEvent("TOOL_OUTPUT", { toolName: toolCall.function.name, result: toolResult }, { userId: data.userId, agentName: "Discovery Agent" });
+
                 messages.push({
                     role: "tool",
                     tool_call_id: toolCall.id,
@@ -136,6 +141,7 @@ export async function DiscoveryAgent(data: { userId: string; Query: string }, hi
                 res.write(`data: ${JSON.stringify({ products: uniqueProducts, done: true })}\n\n`);
                 res.end();
             }
+            auditLogger.logAgentEvent("AGENT_COMPLETED", { agentName: "Discovery Agent", result: "Discovery finished." }, { userId: data.userId, agentName: "Discovery Agent" });
             return finalData;
         }
     }
